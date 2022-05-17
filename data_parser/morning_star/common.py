@@ -1,16 +1,17 @@
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import sys
 import os
+
 sys.path.insert(0, '/usr/lib/python3/dist-packages')
 sys.path.insert(0, os.path.expanduser("/usr/local/lib/python3.5/dist-packages"))
 sys.path.insert(0, os.path.expanduser("~/PycharmProjects/StockScraping/"))
 
 import csv
 import re
+import os
 
 try:
     # for Python 2.x
@@ -43,6 +44,7 @@ GROWTH_ROW = "Growth"
 
 DATE_PATTERN = re.compile("([0-9]){4}-([0-9]){2}")
 
+
 def initialize_webdriver():
     profile = webdriver.FirefoxProfile()
     profile.set_preference("browser.download.folderList", 2)
@@ -50,11 +52,9 @@ def initialize_webdriver():
     profile.set_preference("browser.download.dir", '/tmp/')
     profile.set_preference("browser.helperApps.neverAsk.saveToDisk", "text/html")
 
-
-    global driver
+    # global driver
     driver = webdriver.Firefox(firefox_profile=profile)
 
-initialize_webdriver()
 
 def check_if_date(s):
     if DATE_PATTERN.match(s):
@@ -64,7 +64,7 @@ def check_if_date(s):
 
 
 def to_date(s):
-    if s=='TTM' or s=='Latest Qtr':
+    if s == 'TTM' or s == 'Latest Qtr':
         now = datetime.datetime.now()
         return now.strftime("%Y-%m")
     return s
@@ -75,7 +75,7 @@ def get_table():
 
 
 def to_float(s):
-    s = s.replace("\n", "").replace(" ", "").replace(",","")
+    s = s.replace("\n", "").replace(" ", "").replace(",", "")
     try:
         n = float(s)
     except:
@@ -83,16 +83,17 @@ def to_float(s):
     return n
 
 
-def get_10yrs_data_from_csv(ticker):
-
+def get_10yrs_data_from_csv(ticker, stock_crawler):
     idx_dot = ticker.find('.')
-    if idx_dot!=-1:
+    if idx_dot != -1:
         ticker = ticker[:idx_dot]
 
-    driver.get(KEYRATIO_URL % ticker)
-    driver.find_element_by_id("financials").find_element_by_class_name("large_button").click()
+    stock_crawler.morning_star_driver.get(KEYRATIO_URL % ticker)
+    stock_crawler.morning_star_driver.find_element_by_id("financials").find_element_by_class_name(
+        "large_button").click()
 
-    f = open("/tmp/%s Key Ratios.csv" % ticker, "r")
+    csv_file_path = os.path.join(stock_crawler.morning_star_working_folder, "%s Key Ratios.csv" % ticker)
+    f = open(csv_file_path, "r")
     csv_parsed = csv.reader(f, delimiter=',')
 
     gt = get_table
@@ -102,7 +103,7 @@ def get_10yrs_data_from_csv(ticker):
     d = None
     last_columns = None
     for r in csv_parsed:
-        if len(r)==0:
+        if len(r) == 0:
             d = None
             continue
         first_col = r[0]
@@ -131,20 +132,13 @@ def get_10yrs_data_from_csv(ticker):
 
     f.close()
 
-    os.remove("/tmp/%s Key Ratios.csv" % ticker)
+    os.remove(csv_file_path)
 
     return datas
 
 
 get_10yrs_data = get_10yrs_data_from_csv
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     results = get_10yrs_data('NVDA')
     print(results[FINANCIALS].loc["Earnings Per Share USD"])
-
-
-
-
-
-
